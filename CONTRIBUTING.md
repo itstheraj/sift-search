@@ -32,7 +32,7 @@ image, asr, ocr, gui, kde).
 - New behavior has a test (use the fake model pattern in `tests/`).
 - User visible changes update the README.
 
-CI runs the same three commands against Python 3.11 and 3.12. `main` is
+CI runs the same three commands against Python 3.11, 3.12, and 3.13. `main` is
 protected, so work on a branch and open a pull request.
 
 ## Code of Conduct
