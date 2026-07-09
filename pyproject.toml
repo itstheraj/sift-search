@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sift-search-kde"
-version = "0.1.0"
+version = "0.1.1"
 description = "Local, private semantic + full-text file search for KDE (text, audio/video transcripts, images)"
 readme = "README.md"
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11,<3.14"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Suraj Mirpuri" }]
@@ -20,6 +20,7 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Desktop Environment :: File Managers",
     "Topic :: Text Processing :: Indexing",
 ]
