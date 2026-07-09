@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sift-search-kde"
-version = "0.1.1"
+version = "0.1.2"
 description = "Local, private semantic + full-text file search for KDE (text, audio/video transcripts, images)"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
