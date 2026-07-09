@@ -55,10 +55,17 @@ class FasterWhisperTranscriber:
         if self._model is None:
             from faster_whisper import WhisperModel
 
+            from .pins import ASR_REVISIONS
+
             dev = _asr_device(self._device_pref)
             compute = "int8" if dev == "cpu" else "float16"
+            revision = ASR_REVISIONS.get(self.model_name)
             self._model = WhisperModel(
-                self.model_name, device=dev, compute_type=compute, download_root=str(models_dir())
+                self.model_name,
+                device=dev,
+                compute_type=compute,
+                download_root=str(models_dir()),
+                **({"revision": revision} if revision else {}),
             )
         return self._model
 

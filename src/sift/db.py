@@ -1,4 +1,5 @@
 from __future__ import annotations
+import os
 import sqlite3
 import time
 from pathlib import Path
@@ -6,16 +7,35 @@ from pathlib import Path
 SCHEMA = "\nPRAGMA journal_mode = WAL;\nPRAGMA foreign_keys = ON;\nPRAGMA synchronous = NORMAL;\n\nCREATE TABLE IF NOT EXISTS files (\n    id         INTEGER PRIMARY KEY,\n    path       TEXT UNIQUE NOT NULL,\n    mtime      REAL,\n    size       INTEGER,\n    sha256     TEXT,\n    kind       TEXT,\n    status     TEXT DEFAULT 'pending',\n    error      TEXT,\n    indexed_at REAL\n);\n\nCREATE TABLE IF NOT EXISTS chunks (\n    id       INTEGER PRIMARY KEY,\n    file_id  INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,\n    kind     TEXT NOT NULL,           -- text | transcript | image\n    text     TEXT,\n    start_ms INTEGER,                 -- media: segment start\n    end_ms   INTEGER,                 -- media: segment end\n    page     INTEGER,                 -- docs: page number\n    ord      INTEGER                  -- order within the file\n);\nCREATE INDEX IF NOT EXISTS idx_chunks_file ON chunks(file_id);\n\n-- Stemmed keyword recall.\nCREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(\n    text, content='chunks', content_rowid='id', tokenize='porter unicode61'\n);\n-- Substring / typo-tolerant fuzzy matching.\nCREATE VIRTUAL TABLE IF NOT EXISTS chunks_tri USING fts5(\n    text, content='chunks', content_rowid='id', tokenize='trigram'\n);\n\nCREATE TRIGGER IF NOT EXISTS chunks_ai AFTER INSERT ON chunks BEGIN\n    INSERT INTO chunks_fts(rowid, text) VALUES (new.id, new.text);\n    INSERT INTO chunks_tri(rowid, text) VALUES (new.id, new.text);\nEND;\nCREATE TRIGGER IF NOT EXISTS chunks_ad AFTER DELETE ON chunks BEGIN\n    INSERT INTO chunks_fts(chunks_fts, rowid, text) VALUES ('delete', old.id, old.text);\n    INSERT INTO chunks_tri(chunks_tri, rowid, text) VALUES ('delete', old.id, old.text);\nEND;\nCREATE TRIGGER IF NOT EXISTS chunks_au AFTER UPDATE ON chunks BEGIN\n    INSERT INTO chunks_fts(chunks_fts, rowid, text) VALUES ('delete', old.id, old.text);\n    INSERT INTO chunks_tri(chunks_tri, rowid, text) VALUES ('delete', old.id, old.text);\n    INSERT INTO chunks_fts(rowid, text) VALUES (new.id, new.text);\n    INSERT INTO chunks_tri(rowid, text) VALUES (new.id, new.text);\nEND;\n\nCREATE TABLE IF NOT EXISTS jobs (\n    id         INTEGER PRIMARY KEY,\n    file_id    INTEGER REFERENCES files(id) ON DELETE CASCADE,\n    stage      TEXT NOT NULL,         -- extract | embed_text | embed_image | asr\n    state      TEXT NOT NULL DEFAULT 'pending',  -- pending | running | done | error\n    attempts   INTEGER DEFAULT 0,\n    error      TEXT,\n    updated_at REAL\n);\nCREATE INDEX IF NOT EXISTS idx_jobs_state ON jobs(state, stage);\n\nCREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);\n"
 
 
+def _restrict(path: Path, mode: int) -> None:
+    try:
+        path.chmod(mode)
+    except OSError:
+        pass
+
+
 def connect(path: Path | str, *, load_vec: bool = False) -> sqlite3.Connection:
     path = Path(path)
-    if str(path) != ":memory:":
+    on_disk = str(path) != ":memory:"
+    if on_disk:
         path.parent.mkdir(parents=True, exist_ok=True)
+        # The index stores the extracted text, transcripts, and OCR of every
+        # indexed document, so it is exactly as sensitive as those files. Create
+        # it 0600 rather than letting the umask decide, and tighten an existing
+        # index that a previous version left world-readable.
+        _restrict(path.parent, 0o700)
+        os.close(os.open(path, os.O_CREAT | os.O_RDONLY, 0o600))
+        _restrict(path, 0o600)
     con = sqlite3.connect(path)
     con.row_factory = sqlite3.Row
     if load_vec:
         load_sqlite_vec(con)
     con.executescript(SCHEMA)
     con.commit()
+    if on_disk:
+        # WAL mode creates these sidecars itself, under the default umask.
+        for suffix in ("-wal", "-shm"):
+            _restrict(path.with_name(path.name + suffix), 0o600)
     return con
 
 
