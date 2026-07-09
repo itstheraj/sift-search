@@ -1,0 +1,66 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sift-search"
+version = "0.1.0"
+description = "Local, private semantic + full-text file search for KDE (text, audio/video transcripts, images)"
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Suraj Mirpuri" }]
+keywords = ["search", "rag", "semantic-search", "kde", "krunner", "local", "sqlite"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: X11 Applications :: KDE",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Desktop Environment :: File Managers",
+    "Topic :: Text Processing :: Indexing",
+]
+
+dependencies = [
+    "pypdf>=4.0",
+    "python-docx>=1.1",
+    "beautifulsoup4>=4.12",
+    "lxml>=5.0",
+    "rich>=13.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/itstheraj/sift-search"
+Source = "https://github.com/itstheraj/sift-search"
+Issues = "https://github.com/itstheraj/sift-search/issues"
+
+[project.optional-dependencies]
+semantic = ["sentence-transformers>=3.0", "sqlite-vec>=0.1.6"]
+image = ["open-clip-torch>=2.24", "pillow>=10.0"]
+asr = ["faster-whisper>=1.0"]
+ocr = ["pytesseract>=0.3.10", "pymupdf>=1.24", "pillow>=10.0"]
+ocr-onnx = ["rapidocr-onnxruntime>=1.3", "pymupdf>=1.24", "pillow>=10.0"]
+gui = ["PySide6>=6.7"]
+kde = ["dbus-next>=0.2.3"]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
+[project.scripts]
+sift = "sift.cli:main"
+sift-search = "sift.gui.app:_entrypoint"
+sift-krunner = "sift.krunner:run_krunner_service"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint.per-file-ignores]
+"src/sift/krunner.py" = ["F821", "F722"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

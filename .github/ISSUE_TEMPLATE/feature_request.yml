@@ -1,0 +1,29 @@
+name: Feature request
+description: Suggest something Sift should do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do that Sift makes hard today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: What you have in mind
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: principles
+    attributes:
+      label: Does this fit the project principles?
+      description: See CONTRIBUTING.md. Uncheck anything your idea would break.
+      options:
+        - label: Works on CPU without a GPU
+        - label: Stays local, no cloud calls and no telemetry
+        - label: Degrades gracefully when an optional dependency is missing
+        - label: Does not hog the desktop
