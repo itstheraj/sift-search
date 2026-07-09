@@ -3,7 +3,7 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "sift-search"
+name = "sift-search-kde"
 version = "0.1.0"
 description = "Local, private semantic + full-text file search for KDE (text, audio/video transcripts, images)"
 readme = "README.md"

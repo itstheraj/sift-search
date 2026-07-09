@@ -1,4 +1,32 @@
+import stat
+
 from sift import db
+
+
+def _mode(path):
+    return stat.S_IMODE(path.stat().st_mode)
+
+
+def test_index_and_parent_dir_are_owner_only(tmp_path):
+    dbp = tmp_path / "data" / "index.db"
+    con = db.connect(dbp)
+    con.execute("PRAGMA wal_checkpoint")
+    assert _mode(dbp) == 0o600
+    assert _mode(dbp.parent) == 0o700
+    for sidecar in (dbp.with_name("index.db-wal"), dbp.with_name("index.db-shm")):
+        if sidecar.exists():
+            assert _mode(sidecar) == 0o600, sidecar
+
+
+def test_connect_tightens_a_world_readable_index(tmp_path):
+    """An index created by an older version must not stay world-readable."""
+    dbp = tmp_path / "data" / "index.db"
+    dbp.parent.mkdir(parents=True)
+    dbp.parent.chmod(0o755)
+    dbp.touch(mode=0o644)
+    db.connect(dbp)
+    assert _mode(dbp) == 0o600
+    assert _mode(dbp.parent) == 0o700
 
 
 def test_schema_and_fts_sync():

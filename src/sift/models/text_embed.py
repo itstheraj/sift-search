@@ -43,9 +43,15 @@ class SentenceTransformerEmbedder:
         if self._model is None:
             from sentence_transformers import SentenceTransformer
 
+            from .pins import TEXT_REVISIONS
+
             device = resolve_device(self._device_pref)
+            revision = TEXT_REVISIONS.get(self.model_name)
             self._model = SentenceTransformer(
-                self.model_name, device=device, cache_folder=str(models_dir())
+                self.model_name,
+                device=device,
+                cache_folder=str(models_dir()),
+                **({"revision": revision} if revision else {}),
             )
             get_dim = (
                 getattr(self._model, "get_embedding_dimension", None)

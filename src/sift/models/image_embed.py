@@ -26,14 +26,50 @@ class OpenClipEmbedder:
         self._tokenizer = None
         self._dim: int | None = None
 
+    def _create(self):
+        """Build the model, pinning the checkpoint revision when one is known.
+
+        open_clip's factory takes no `revision`, so a pinned model has its
+        checkpoint resolved here and handed back as a path. The factory only
+        merges a pretrained tag's preprocessing config when it resolves the tag
+        itself, so mean/std/interpolation/resize_mode must be forwarded
+        explicitly or the image transform silently changes.
+        """
+        import os
+
+        import open_clip
+        from open_clip.pretrained import download_pretrained_from_hf, get_pretrained_cfg
+
+        from .pins import IMAGE_REVISIONS
+
+        cache_dir = str(models_dir())
+        revision = IMAGE_REVISIONS.get((self.model_name, self.pretrained))
+        pcfg = get_pretrained_cfg(self.model_name, self.pretrained) if revision else None
+        if not revision or not pcfg or not pcfg.get("hf_hub"):
+            return open_clip.create_model_and_transforms(
+                self.model_name, pretrained=self.pretrained, cache_dir=cache_dir
+            )
+
+        repo_id, filename = os.path.split(pcfg["hf_hub"])
+        checkpoint = download_pretrained_from_hf(
+            repo_id, filename=filename or None, revision=revision, cache_dir=cache_dir
+        )
+        return open_clip.create_model_and_transforms(
+            self.model_name,
+            pretrained=checkpoint,
+            cache_dir=cache_dir,
+            image_mean=pcfg.get("mean"),
+            image_std=pcfg.get("std"),
+            image_interpolation=pcfg.get("interpolation"),
+            image_resize_mode=pcfg.get("resize_mode"),
+        )
+
     def _load(self):
         if self._model is None:
             import open_clip
 
             device = resolve_device(self._device_pref)
-            model, _, preprocess = open_clip.create_model_and_transforms(
-                self.model_name, pretrained=self.pretrained, cache_dir=str(models_dir())
-            )
+            model, _, preprocess = self._create()
             model.eval()
             model.to(device)
             self._model = model
